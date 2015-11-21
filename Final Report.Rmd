@@ -1,0 +1,117 @@
+---
+title: "Coursera Capstone Project 2015"
+author: "Trung-Hieu Nguyen"
+date: "November 12, 2015"
+output: pdf_document
+---
+#Introduction  
+This is a capstone project report for Coursera Data Science Specialization conducted by John Hopskin University. The dataset given was [Yelp Challenge Data set](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/yelp_dataset_challenge_academic_dataset.zip)  
+
+During first half of the course, we have already explored dataset. Below were our stated questions and tasks of interested.
+
+Primary question: Can we predict from a textual review whether general opinion on business is positive or negative?  
+
+The code work can be viewed and downloaded at my [Github repository](https://github.com/nth1502/Coursera_Yelp_Capstone)  
+
+#Methods and codes:  
+*Note:*   
+The data is relatively large and takes a significant amount of time to process. Hence many codes are broken down into different R files to run seperately. Process data are then saved in appropriate format to be used throughout this report.  
+Hence please refer to a specific files for further details.
+
+##Raw data loading:
+Please refer to *DataLoading.R* for codes.  
+Only business and review data was used for our analysis
+```{r eval=FALSE}
+#Raw data load Task 0
+business <- readRDS("business.rds")
+reviews <- readRDS("reviews.rds")
+```
+
+##Data wrangling: 
+Please  refer to files *DataWrangling.R* for codes. Details of method is explained below.  
+
+Restrains applied on our data and its purposes:  
+1/ Use only data from 6 cities in US to remove non-English reviews.  
+2/ Use only data from food services to increase homogenity in our model.  
+
+Then we combine text reviews from both business data and  reviews data into a single data frame for ease of manipulation.
+
+Firsly, we notice that there are emoticons used in reviews. These can be a good indicator of review sentiment. However we need to convert these emoticons to textual words. To do so we use package *qdap*.
+
+After that, we go through a usual practise of textual cleaning tasks. That includes removing punctuations, numbers, line breaks etc as well as converting everything to lower case letters. To do so we us package *tm*.
+
+Furthermore [Stopwords](http://www.text-analytics101.com/2014/10/all-about-stop-words-for-text-mining.html) were also removed. This makes model constructing features easier
+```{r eval=FALSE}
+#This is the cleaned review text after all procedures described above
+Yelp_reviews <- read.csv("Yelp_reviews_cleaned.csv")
+```
+
+##Sentiment analysis with n-gram:
+[N-grams](http://www.text-analytics101.com/2014/11/what-are-n-grams.html) were analyzed using the *quanteda* package in R.  
+We use uni, bi, tri and quad gram to analyze positive reviews (4 and 5 stars) vs negative reviews (1 and 2 stars). A valid assumption that 3 stars review is neutral is made. 
+Please refer to *NgramChart.R* for codes and details. 
+```{r fig.width=10, fig.height=3,fig.align='center',echo=FALSE}
+library(png)
+library(grid)
+N_grams <- readPNG("C:/Users/Hieu/Documents/GitHub/Yelp_Capstone/N_grams.png")
+grid.raster(N_grams)
+```
+The uni-gram exhibit a similar frequencies of similar set of single words for both positive and negative, thus can be hardly distinguish.  
+The bi-gram however display a relatively significant different between positive and negative reviews.  
+The tri-gram is the most differetiated intuitively. ("will definitely go back" vs "never go back") 
+
+#Models:
+The analysis was completed using Python with *graphlab* library.  
+
+Please refer to *SentimentAnalysis.ipynb* for code lines and details are explained as below.
+
+Binary classifier model to determine if review is positive or negative. 
+Each review was labeled as 1 for positive (4 or 5 stars) and 0 for negative (1 or 2 stars). 
+
+The model was trained on data selected by randomly splitting the entire dataset into a 70% training and 30% testing dataset. (*line 14*)
+
+Adding features such as n-grams (where n > 1) did not increase the accuracy on the training dataset and significantly increased computation time so they were not included in the final model.
+
+The final model uses the 'bag of words' approach or 1-gram counts. This was created using graphlab's function 'text_analytics.count_words,' which counts words in each review. 
+
+Among random forest, naive Bayes and support vector algorithm and logistic regression, logistic regression gave the most accurate results in the training dataset. 
+
+#Results 
+##Accuracy and confusion matrix:
+The trained model was applied to the test dataset and the accuracy was 0.942. The confusion matirx is shown below. (*line 18* in python file)  
+
+|        |   | Predicted | label  |
+|--------|---|-----------|--------|
+|        |   |     0     |    1   |
+| Target | 0 |    4871   |  9339  |
+| label  | 1 |    6009   | 201198 |
+
+##Validation by applied model to certain business:
+For example, we apply our model to restaurant Bagel deli which has business id as "wx2EJUCNOCPrMC0DtKb98A" (*line 25 to line 32* in python file)  
+
+Then by comparing predicted sentiment with underlying sentiments using intutive judgemen, we can see that in fact the model is pretty accurate.
+
+Below are the attached of head and tail of reviews data (sorted by predicted sentiment value from 0 to 1) (*line 28 and line 30*):
+
+```{r echo=FALSE}
+library(png)
+library(grid)
+imghead <- readPNG("C:/Users/Hieu/Documents/GitHub/Yelp_Capstone/BagelHead.png")
+grid.raster(imghead)
+
+```
+```{r echo=FALSE}
+imgtail <- readPNG("C:/Users/Hieu/Documents/GitHub/Yelp_Capstone/BagelTail.png")
+grid.raster(imgtail)
+```
+
+#Discussion:
+Since there is restriction in both time and resources, we have limited the analysis within food servie business in US only. The model hence cannot be used to generalise all other sectors in other places.
+
+Binary classification on sentiment is just a simple model. A further mutifactor model can also be developed to specifically indicates the star rating.
+
+However the accuracy obtained with our bianary classifier model is quite high at 94%.
+
+ 
+
+
